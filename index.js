@@ -1,82 +1,51 @@
 const fs = require('fs')
 const path = require('path')
-const md = require("markdown-it")();
-const jsdom = require("jsdom");
-const { JSDOM } = jsdom;
+const md = require('markdown-it')()
 
-/**
- * Por cada uno de los archivos válidos, debo validar si tiene links.
- * - Si tiene, se extraen.
- * - Si no, se imprime un error: "Este archivo no tiene link's.".
- */
 const validar = (files, isDirectory) => {
   const externalPath = process.argv[2]
-  const absolutePath = path.resolve(externalPath);
+  const absolutePath = path.resolve(externalPath)
 
   files = filtrar(files, absolutePath)
 
   if (files.length === 0) {
     if (isDirectory) {
-      console.error('No hay archivos Markdown (.md) en el directorio', externalPath, '.')
+      console.log('No hay archivos Markdown', externalPath, '.')
     } else {
-      console.error('El archivo', externalPath, "no es de tipo Markdown (.md).")
+      console.log('El archivo', externalPath, 'no es de tipo Markdown.')
     }
-    return 0
+    return null
   }
 
   for (const file of files) {
     const buffer = fs.readFileSync(file)
     const content = buffer.toString()
-    const markdownRender = md.render(content);
-    const htmlRender = new JSDOM(`<html>${markdownRender}</html>`);
-    console.log(markdownRender);
-    console.log(htmlRender);
-    console.log(htmlRender.window.document.links);
+    const markdownRender = md.render(content)
+    console.log(markdownRender)
   }
 }
 
-/**
- * - Si es directorio, hay que validar si existe algún Markdown.
- * - Si es un archivo, hay que validar que este archivo sea Markdown.
- */
 const filtrar = (files, absolutePath) => {
   const filtrados = []
   for (const file of files) {
-    const ext = path.extname(file);
-    if (ext === ".md") {
-      const added = path.isAbsolute(file)
-        ? file
-        : path.join(absolutePath, file);
-      filtrados.push(added);
+    const ext = path.extname(file)
+    if (ext === '.md') {
+      const added = path.isAbsolute(file) ? file : path.join(absolutePath, file)
+      filtrados.push(added)
     }
   }
   return filtrados
 }
 
-const command = ([nodePath, entrypoint, externalPath, ...args]) => {
-  const validate = args.includes('--validate')
-
-  /**
-   * Identificar la ruta (relativa o absoluta)
-   * - Si es relativa, debo transformarla en absoluta
-   */
+const command = (parametro) => {
+  const externalPath = parametro
   const absolutePath = path.resolve(externalPath)
-
-  /**
-   * Hay que identificar si el parametro recibido es un directorio o un archivo
-   * - Si es directorio, hay que recorrerlo para encontrar todos los archivos MD del directorio.
-   */
   const isDirectory = path.extname(absolutePath) === ''
 
-  /**
-   * - Si es directorio, hay que validar si existe algún Markdown.
-   * - Si es un archivo, hay que validar que este archivo sea Markdown.
-   */
   if (isDirectory) {
     fs.readdir(absolutePath, (err, found) => {
       if (err) {
-        // Error para leer directorio
-        console.log('Ha ocurrido un error al leer el contenido del directorio, err: ', err)
+        console.log('Hay un error en la carpeta y no se puede leer: ', err)
         return err
       }
 
@@ -85,8 +54,8 @@ const command = ([nodePath, entrypoint, externalPath, ...args]) => {
   } else {
     fs.stat(absolutePath, (err, stats) => {
       if (err) {
-        console.log("El archivo", absolutePath, "indicado no existe.");
-        return err;
+        console.log('No existe el archivo', absolutePath)
+        return err
       }
 
       validar([absolutePath], false)
@@ -94,8 +63,11 @@ const command = ([nodePath, entrypoint, externalPath, ...args]) => {
   }
 }
 
-command(process.argv)
+// Ejecución por Terminal
+command(process.argv[2])
 
-module.exports = () => {
-  // ...
-};
+// Ejecución como librería
+module.exports = (file) => {
+  return command(file)
+}
+
